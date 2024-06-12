@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Image, ImageBackground, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { Alert, Image, ImageBackground, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import bg_img from '../assets/chat_background.jpg';
 import logo from '../assets/talkie-logo.png';
 
@@ -7,6 +7,17 @@ import logo from '../assets/talkie-logo.png';
 const Start = ({ navigation }) => {
   const [name, setName] = useState('');
   const [activeColor, setActiveColor] = useState('#FFDAC7');
+
+  // Check if the user input is empty
+  const handleButtonPress = () => {
+    if (name.length < 3) {
+      Alert.alert('Enter a valid name');
+    } else {
+      navigation.navigate('Chat',
+        { name: name, activeColor: activeColor });
+    }
+  }
+
 
   return (
     <View style={styles.container}>
@@ -48,8 +59,7 @@ const Start = ({ navigation }) => {
           </View>
           {/* Button that navigates to chat screen when pressed */}
           <TouchableOpacity style={styles.button}
-            onPress={() => navigation.navigate('Chat',
-              { name: name, activeColor: activeColor })}>
+            onPress={() => handleButtonPress()}>
             <Text>Start Chatting</Text>
           </TouchableOpacity>
         </View>
