@@ -13,7 +13,7 @@ const Start = ({ navigation }) => {
     if (name.length < 3) {
       Alert.alert('Enter a valid name');
     } else {
-      navigation.navigate('Chat',
+      navigation.navigate('Contacts',
         { name: name, activeColor: activeColor });
     }
   }
