@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Alert, Image, ImageBackground, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { Alert, Image, ImageBackground, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { getAuth, signInAnonymously } from "firebase/auth";
 import bg_img from '../assets/chat_background.jpg';
 import logo from '../assets/talkie-logo.png';
@@ -79,6 +79,7 @@ const Start = ({ navigation }) => {
           </TouchableOpacity>
         </View>
       </ImageBackground>
+      {Platform.OS === "ios" ? <KeyboardAvoidingView behavior="padding" /> : null}
     </View>
   )
 }
