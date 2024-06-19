@@ -1,23 +1,38 @@
 import { useState } from "react";
 import { Alert, Image, ImageBackground, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { getAuth, signInAnonymously } from "firebase/auth";
 import bg_img from '../assets/chat_background.jpg';
 import logo from '../assets/talkie-logo.png';
 
 // Main view 
 const Start = ({ navigation }) => {
+  const auth = getAuth();
   const [name, setName] = useState('');
   const [activeColor, setActiveColor] = useState('#FFDAC7');
+
+  const signInUser = () => {
+    signInAnonymously(auth)
+      .then(result => {
+        navigation.navigate('Chat',
+          {
+            userID: result.user.uid,
+            name: name,
+            activeColor: activeColor
+          });
+      })
+      .catch((error) => {
+        Alert.alert('Unable to sign in, please try again later.');
+      });
+  }
 
   // Check if the user input is empty
   const handleButtonPress = () => {
     if (name.length < 3) {
       Alert.alert('Enter a valid name');
     } else {
-      navigation.navigate('Contacts',
-        { name: name, activeColor: activeColor });
+      signInUser();
     }
   }
-
 
   return (
     <View style={styles.container}>

@@ -1,41 +1,47 @@
+import { addDoc, collection, onSnapshot, orderBy, query } from "firebase/firestore";
 import { useEffect, useState } from "react";
 import { KeyboardAvoidingView, Platform, StyleSheet, Text, View } from "react-native";
 import { Bubble, Day, GiftedChat, SystemMessage } from "react-native-gifted-chat";
 
 // Chat UI
-const Chat = ({ route, navigation }) => {
-  const { name, activeColor, contact } = route.params;
+const Chat = ({ db, route, navigation }) => {
+  const { name, activeColor, userID } = route.params;
   const [messages, setMessages] = useState([]);
 
   // Stack new messages
-  const onSend = (newMessages) => {
-    setMessages(previousMessages => GiftedChat.append(previousMessages, newMessages))
+  const onSend = async (newMessages) => {
+    setMessages(previousMessages => GiftedChat.append(previousMessages, newMessages));
+
+    // add the new message to firebase
+    await addDoc(collection(db, 'messages'), {
+      ...newMessages[0],
+      createdAt: new Date()
+    });
   }
 
   useEffect(() => {
-    // Change the header name to be the contact name
-    navigation.setOptions({ title: contact.name });
+    // Change the header name to be the name
+    navigation.setOptions({ title: 'Chat room' });
 
-    // Mock messages
-    setMessages([
-      {
-        _id: 1,
-        text: "Hello developer",
-        createdAt: new Date(),
-        user: {
-          _id: contact.id,
-          name: contact.name,
-          avatar: contact.avatar,
-        },
-      },
-      //This is a system message
-      {
-        _id: contact.id,
-        text: `You've entered the chat`,
-        createdAt: new Date(),
-        system: true,
-      }
-    ]);
+    // query the wanted collection from firebase
+    const q = query(collection(db, 'messages'), orderBy("createdAt", "desc"));
+    const unsubMessages = onSnapshot(q, (messagesSnapshot) => {
+      let newMessages = [];
+      messagesSnapshot.forEach(msg => {
+        newMessages.push(
+          {
+            id: msg.id,
+            ...msg.data(),
+            createdAt: new Date(msg.data().createdAt.toMillis()),
+          })
+      });
+      setMessages(newMessages);
+    });
+
+    // stops receiving updates from firebase
+    return () => {
+      if (unsubMessages) unsubMessages();
+    }
   }, []);
 
   // Change the default bubble style
@@ -83,7 +89,8 @@ const Chat = ({ route, navigation }) => {
         messages={messages}
         onSend={messages => onSend(messages)}
         user={{
-          _id: 1
+          _id: userID,
+          name: name
         }}
         renderBubble={renderBubble}
         renderUsernameOnMessage={true}
