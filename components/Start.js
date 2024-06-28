@@ -13,7 +13,7 @@ const Start = ({ navigation }) => {
   const signInUser = () => {
     signInAnonymously(auth)
       .then(result => {
-        navigation.navigate('Chat',
+        navigation.navigate('Contacts',
           {
             userID: result.user.uid,
             name: name,

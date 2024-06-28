@@ -6,14 +6,15 @@ import { ListItem, Avatar } from 'react-native-elements';
 const mockContacts = [
   {
     id: 2,
-    name: 'Elon Musk',
+    name: 'Frontend group',
     // require gets the image in the location indicated
-    avatar: require("../assets/elon-musk.jpg"),
+    avatar: require("../assets/frontend.png"),
     phone: '(+49) 123-456-7899',
-  }, {
+  },
+  {
     id: 3,
-    name: 'Mark Zuckerberg',
-    avatar: require("../assets/mark-zuck.png"),
+    name: 'Backend group',
+    avatar: require("../assets/backend.png"),
     phone: '(+49) 123-446-7891',
   }
 ];
@@ -21,12 +22,12 @@ const mockContacts = [
 // Contact UI
 const ContactList = ({ route, navigation }) => {
   // Params received from the previous screen
-  const { name, activeColor } = route.params;
+  const { name, activeColor, userID } = route.params;
 
   const renderItem = ({ item }) => (
     // Calls Chat UI with the selected contact info
     <TouchableOpacity onPress={() => navigation.navigate('Chat',
-      { name: name, activeColor: activeColor, contact: item })}
+      { name: name, activeColor: activeColor, contact: item, userID: userID })}
     >
       <ListItem
         containerStyle={styles.listItem}>

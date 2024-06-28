@@ -1,48 +1,76 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { addDoc, collection, onSnapshot, orderBy, query } from "firebase/firestore";
 import { useEffect, useState } from "react";
-import { KeyboardAvoidingView, Platform, StyleSheet, Text, View } from "react-native";
-import { Bubble, Day, GiftedChat, SystemMessage } from "react-native-gifted-chat";
+import { ActivityIndicator, KeyboardAvoidingView, Platform, StyleSheet, Text, View } from "react-native";
+import { Bubble, Day, GiftedChat, InputToolbar, SystemMessage } from "react-native-gifted-chat";
 
 // Chat UI
-const Chat = ({ db, route, navigation }) => {
-  const { name, activeColor, userID } = route.params;
+const Chat = ({ db, route, navigation, isConnected }) => {
+  const { name, activeColor, userID, contact } = route.params;
   const [messages, setMessages] = useState([]);
+  const collectionContact = contact.name.trim();
+  const [loading, setLoading] = useState(true);
 
   // Stack new messages
   const onSend = async (newMessages) => {
     setMessages(previousMessages => GiftedChat.append(previousMessages, newMessages));
 
     // add the new message to firebase
-    await addDoc(collection(db, 'messages'), {
+    await addDoc(collection(db, collectionContact), {
       ...newMessages[0],
       createdAt: new Date()
     });
   }
 
+  let unsubMessages;
   useEffect(() => {
+    setLoading(true);
     // Change the header name to be the name
-    navigation.setOptions({ title: 'Chat room' });
+    navigation.setOptions({ title: contact.name });
 
-    // query the wanted collection from firebase
-    const q = query(collection(db, 'messages'), orderBy("createdAt", "desc"));
-    const unsubMessages = onSnapshot(q, (messagesSnapshot) => {
-      let newMessages = [];
-      messagesSnapshot.forEach(msg => {
-        newMessages.push(
-          {
-            id: msg.id,
-            ...msg.data(),
-            createdAt: new Date(msg.data().createdAt.toMillis()),
-          })
+    if (isConnected === true) {
+      // unregister current onSnapshot() listener to avoid registering multiple listeners when
+      // useEffect code is re-executed.
+      if (unsubMessages) unsubMessages();
+      unsubMessages = null;
+
+      // query the wanted collection from firebase
+      const q = query(collection(db, collectionContact), orderBy("createdAt", "desc"));
+      unsubMessages = onSnapshot(q, (messagesSnapshot) => {
+        let newMessages = [];
+        messagesSnapshot.forEach(msg => {
+          newMessages.push(
+            {
+              id: msg.id,
+              ...msg.data(),
+              createdAt: new Date(msg.data().createdAt.toMillis()),
+            })
+        });
+        cacheMessages(newMessages);
+        setMessages(newMessages);
+        setLoading(false);
       });
-      setMessages(newMessages);
-    });
+    } else loadMessages();
 
     // stops receiving updates from firebase
     return () => {
       if (unsubMessages) unsubMessages();
     }
-  }, []);
+  }, [isConnected]);
+
+  const loadMessages = async () => {
+    const msgs = await AsyncStorage.getItem('messages' + contact.id) || [];
+    setMessages(JSON.parse(msgs));
+    setLoading(false);
+  }
+
+  const cacheMessages = async (newMessages) => {
+    try {
+      await AsyncStorage.setItem('messages' + contact.id, JSON.stringify(newMessages));
+    } catch (error) {
+      console.log(error);
+    }
+  }
 
   // Change the default bubble style
   const renderBubble = (props) => {
@@ -81,22 +109,31 @@ const Chat = ({ db, route, navigation }) => {
     />
   }
 
+  const renderInputToolbar = (props) => {
+    if (isConnected === true) {
+      return <InputToolbar {...props} />;
+    } else null;
+  }
+
   return (
     <View style={[styles.container, { backgroundColor: activeColor }]}>
       {/* Library responsible to create a chat UI */}
-      <GiftedChat
-        styles={[styles.container, { backgroundColor: activeColor }]}
-        messages={messages}
-        onSend={messages => onSend(messages)}
-        user={{
-          _id: userID,
-          name: name
-        }}
-        renderBubble={renderBubble}
-        renderUsernameOnMessage={true}
-        renderSystemMessage={renderSystemMessage}
-        renderDay={renderDay}
-      />
+      {loading ? <ActivityIndicator size="large" color="#000" /> :
+        <GiftedChat
+          styles={[styles.container, { backgroundColor: activeColor }]}
+          messages={messages}
+          onSend={messages => onSend(messages)}
+          user={{
+            _id: userID,
+            name: name,
+          }}
+          renderBubble={renderBubble}
+          renderUsernameOnMessage={true}
+          renderSystemMessage={renderSystemMessage}
+          renderDay={renderDay}
+          renderInputToolbar={renderInputToolbar}
+        />
+      }
       {/* Android older versions have a bug that does not show text message.
       This config fixes it. */}
       {Platform.OS === 'android' ? <KeyboardAvoidingView behavior="height" /> : null}
