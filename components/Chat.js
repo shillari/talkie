@@ -1,15 +1,24 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { addDoc, collection, onSnapshot, orderBy, query } from "firebase/firestore";
 import { useEffect, useState } from "react";
-import { ActivityIndicator, KeyboardAvoidingView, Platform, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, KeyboardAvoidingView, Platform, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Bubble, Day, GiftedChat, InputToolbar, SystemMessage } from "react-native-gifted-chat";
+import CustomActions from "./CustomActions";
+import { ActionSheetProvider } from "@expo/react-native-action-sheet";
+import MapView from "react-native-maps";
+import VoiceRecord from "./VoiceRecord";
+import { Audio } from "expo-av";
+import Icon from 'react-native-vector-icons/Feather';
+import Icon2 from 'react-native-vector-icons/FontAwesome5';
 
 // Chat UI
-const Chat = ({ db, route, navigation, isConnected }) => {
+const Chat = ({ db, route, navigation, isConnected, storage }) => {
   const { name, activeColor, userID, contact } = route.params;
   const [messages, setMessages] = useState([]);
   const collectionContact = contact.name.trim();
   const [loading, setLoading] = useState(true);
+  const [recording, isRecording] = useState(false);
+  const [play, setPlay] = useState(null);
 
   // Stack new messages
   const onSend = async (newMessages) => {
@@ -55,6 +64,10 @@ const Chat = ({ db, route, navigation, isConnected }) => {
     // stops receiving updates from firebase
     return () => {
       if (unsubMessages) unsubMessages();
+      if (play) {
+        play.unloadAsync();
+        setPlay(null);
+      }
     }
   }, [isConnected]);
 
@@ -115,24 +128,88 @@ const Chat = ({ db, route, navigation, isConnected }) => {
     } else null;
   }
 
+  const renderCustomActions = (props) => {
+    return (
+      <>
+        {recording ? null :
+          <CustomActions storage={storage} {...props}></CustomActions>
+        }
+        <VoiceRecord isRecording={isRecording} storage={storage} {...props}></VoiceRecord>
+      </>
+    );
+  }
+
+  const renderCustomView = (props) => {
+    const { currentMessage } = props;
+    if (currentMessage.location) {
+      return (
+        <MapView
+          style={{
+            width: 150,
+            height: 100,
+            borderRadius: 13,
+            margin: 3
+          }}
+          region={{
+            latitude: currentMessage.location.latitude,
+            longitude: currentMessage.location.longitude,
+            latitudeDelta: 0.0922,
+            longitudeDelta: 0.0421,
+          }}
+        />
+      );
+    }
+    return null;
+  }
+
+  const renderAudioBubble = (props) => {
+    const startPlayRecord = async () => {
+      if (play) await play.unloadAsync();
+      const { sound } = await Audio.Sound.createAsync({
+        uri:
+          props.currentMessage.audio
+      });
+      setPlay(sound);
+      await sound.playAsync();
+    }
+
+    return <View {...props}>
+      <TouchableOpacity
+        style={{
+          borderRadius: 10, margin: 5
+        }}
+        onPress={startPlayRecord}>
+        <Text style={{
+          textAlign: "center", color: 'black', padding: 5
+        }}>
+          <Icon2 name="play-circle" size={20}></Icon2></Text>
+      </TouchableOpacity>
+    </View>
+  }
+
   return (
     <View style={[styles.container, { backgroundColor: activeColor }]}>
       {/* Library responsible to create a chat UI */}
       {loading ? <ActivityIndicator size="large" color="#000" /> :
-        <GiftedChat
-          styles={[styles.container, { backgroundColor: activeColor }]}
-          messages={messages}
-          onSend={messages => onSend(messages)}
-          user={{
-            _id: userID,
-            name: name,
-          }}
-          renderBubble={renderBubble}
-          renderUsernameOnMessage={true}
-          renderSystemMessage={renderSystemMessage}
-          renderDay={renderDay}
-          renderInputToolbar={renderInputToolbar}
-        />
+        <ActionSheetProvider>
+          <GiftedChat
+            styles={[styles.container, { backgroundColor: activeColor }]}
+            messages={messages}
+            onSend={messages => onSend(messages)}
+            user={{
+              _id: userID,
+              name: name,
+            }}
+            renderBubble={renderBubble}
+            renderUsernameOnMessage={true}
+            renderSystemMessage={renderSystemMessage}
+            renderDay={renderDay}
+            renderInputToolbar={renderInputToolbar}
+            renderActions={renderCustomActions}
+            renderCustomView={renderCustomView}
+            renderMessageAudio={renderAudioBubble}
+          />
+        </ActionSheetProvider>
       }
       {/* Android older versions have a bug that does not show text message.
       This config fixes it. */}

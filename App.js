@@ -11,7 +11,7 @@ import { initializeApp } from "firebase/app";
 import { disableNetwork, enableNetwork, getFirestore } from "firebase/firestore";
 import ContactList from './components/ContactList';
 import { useNetInfo } from '@react-native-community/netinfo';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getStorage } from 'firebase/storage';
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
@@ -28,6 +28,8 @@ const app = initializeApp(firebaseConfig);
 
 // Initialize Cloud Firestore and get a reference to the service
 const db = getFirestore(app);
+
+const storage = getStorage(app);
 
 // The app’s main Chat component that renders the chat UI
 const App = () => {
@@ -65,7 +67,10 @@ const App = () => {
         <Stack.Screen
           name='Chat'
         >
-          {props => <Chat isConnected={connectionStatus.isConnected} db={db} {...props} />}
+          {props => <Chat isConnected={connectionStatus.isConnected}
+            db={db}
+            storage={storage}
+            {...props} />}
         </Stack.Screen>
         <Stack.Screen
           name='Contacts'
